@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-
+using System.IO;
 public class MainManager : MonoBehaviour
 {
     public Brick BrickPrefab;
@@ -12,20 +12,21 @@ public class MainManager : MonoBehaviour
 
     public Text ScoreText;
     public GameObject GameOverText;
-    
+    public Text HighScore;
+
     private bool m_Started = false;
     private int m_Points;
-    
+
     private bool m_GameOver = false;
 
-    
+
     // Start is called before the first frame update
     void Start()
     {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
-        
-        int[] pointCountArray = new [] {1,1,2,2,5,5};
+
+        int[] pointCountArray = new[] { 1, 1, 2, 2, 5, 5 };
         for (int i = 0; i < LineCount; ++i)
         {
             for (int x = 0; x < perLine; ++x)
@@ -36,6 +37,7 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        HighScoreText();
     }
 
     private void Update()
@@ -72,5 +74,50 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        CheckHighScore();
+    }
+
+    public void HighScoreText()
+    {
+        if (File.Exists(Application.persistentDataPath + "/highscore.json"))
+        {
+            string text = File.ReadAllText(Application.persistentDataPath + "/highscore.json");
+            PlayerData player = JsonUtility.FromJson<PlayerData>(text);
+            HighScore.text = "Best Score : " + player.name + " : " + player.highscore;
+        }
+        else
+        {
+            HighScore.text = "No high score yet!";
+        }
+    }
+    public void CheckHighScore()
+    {
+        if (File.Exists(Application.persistentDataPath + "/highscore.json"))
+        {
+            string text = File.ReadAllText(Application.persistentDataPath + "/highscore.json");
+            PlayerData player = JsonUtility.FromJson<PlayerData>(text);
+            if (m_Points > player.highscore)
+            {
+                player.highscore = m_Points;
+                player.name = UIManager.instance.playerName;
+                string json = JsonUtility.ToJson(player);
+                File.WriteAllText(Application.persistentDataPath + "/highscore.json", json);
+                HighScoreText();
+            }
+        }
+        else
+        {
+            PlayerData newPlayer = new PlayerData();
+            newPlayer.name = UIManager.instance.playerName;
+            newPlayer.highscore = m_Points;
+            string json = JsonUtility.ToJson(newPlayer);
+            File.WriteAllText(Application.persistentDataPath + "/highscore.json", json);
+        }
+    }
+    [System.Serializable]
+    class PlayerData
+    {
+        public string name;
+        public int highscore;
     }
 }
